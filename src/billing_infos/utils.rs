@@ -30,12 +30,16 @@ pub trait RawDataKind {
 pub fn make_paragraph_from_raw(r: &RawData) -> Option<BillingInfoParagrah> {
     let i = match r.tot_len() {
         125..=140 => 3,
-        70..=124 => 2,
+        60..=124 => 2,
         _ => 1,
     };
     let mut data = BillingInfoParagrah::new();
     if let Some(uns) = r.get(&DataType::Unstructured) {
-        data.extend(split_unstructured(uns.first().unwrap()));
+        if let Some(unstructured) = uns.first() {
+            if !unstructured.is_empty() {
+                data.extend(split_unstructured(unstructured));
+            }
+        }
     }
     if let Some(structured) = r.get(&DataType::Structured) {
         let tot = structured.len();
