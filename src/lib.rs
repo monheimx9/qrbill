@@ -9,9 +9,9 @@ use svg::{
 };
 use thousands::Separable;
 
+mod dimensions;
 pub mod esr;
 pub mod iso11649;
-mod dimensions;
 mod label;
 pub mod render;
 mod utils;
@@ -74,40 +74,35 @@ pub enum Error {
 }
 
 pub enum Address {
-    Cobined(CombinedAddress),
+    Combined(CombinedAddress),
     Structured(StructuredAddress),
 }
 
 impl AddressExt for Address {
     fn data_list(&self) -> Vec<String> {
         match self {
-            Address::Cobined(a) => a.data_list(),
+            Address::Combined(a) => a.data_list(),
             Address::Structured(a) => a.data_list(),
         }
     }
 
     fn as_paragraph(&self, max_width: usize) -> Vec<String> {
         match self {
-            Address::Cobined(a) => a.as_paragraph(max_width),
+            Address::Combined(a) => a.as_paragraph(max_width),
             Address::Structured(a) => a.as_paragraph(max_width),
         }
     }
 }
 
 pub struct CombinedAddress {
-    name: String,
-    line1: String,
-    line2: String,
+    name:    String,
+    line1:   String,
+    line2:   String,
     country: CountryCode,
 }
 
 impl CombinedAddress {
-    pub fn new(
-        name: String,
-        line1: String,
-        line2: String,
-        country: CountryCode,
-    ) -> Result<Self, Error> {
+    pub fn new(name: String, line1: String, line2: String, country: CountryCode) -> Result<Self, Error> {
         if line1.len() > 70 || line2.len() > 70 {
             return Err(Error::Line);
         }
@@ -142,12 +137,12 @@ impl AddressExt for CombinedAddress {
 }
 
 pub struct StructuredAddress {
-    pub name: String,
-    pub street: String,
+    pub name:         String,
+    pub street:       String,
     pub house_number: String,
-    pub postal_code: String,
-    pub city: String,
-    pub country: CountryCode,
+    pub postal_code:  String,
+    pub city:         String,
+    pub country:      CountryCode,
 }
 
 impl StructuredAddress {
@@ -198,20 +193,16 @@ impl AddressExt for StructuredAddress {
             self.country.alpha2().to_string(),
         ]
     }
-
     fn as_paragraph(&self, max_width: usize) -> Vec<String> {
         let maybe_prefix = if self.country == CountryCode::CHE {
-            "".to_string() } else {
+            "".to_string()
+        } else {
             format!("{}-", self.country.alpha2().to_owned())
         };
         vec![
             self.name.clone(),
             format!("{} {}", self.street, self.house_number),
-            format!(
-                "{maybe_prefix}{} {}",
-                self.postal_code,
-                self.city,
-            ),
+            format!("{maybe_prefix}{} {}", self.postal_code, self.city,),
         ]
         .into_iter()
         .map(|line| textwrap::fill(&line, max_width))
@@ -227,51 +218,55 @@ pub enum Currency {
 
 impl std::fmt::Display for Currency {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match self {
-            Currency::SwissFranc => "CHF".to_string(),
-            Currency::Euro => "EUR".to_string(),
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                Currency::SwissFranc => "CHF".to_string(),
+                Currency::Euro => "EUR".to_string(),
+            }
+        )
     }
 }
 
 pub struct QRBill {
-    account: Iban,
-    creditor: Address,
-    amount: Option<f64>,
-    currency: Currency,
-    due_date: Option<NaiveDate>,
-    debtor: Option<Address>,
-    reference: Reference,
+    account:               Iban,
+    creditor:              Address,
+    amount:                Option<f64>,
+    currency:              Currency,
+    due_date:              Option<NaiveDate>,
+    debtor:                Option<Address>,
+    reference:             Reference,
     /// Extra information aimed for the bill recipient.
     pub extra_infos:       Option<BillingInfos>,
     /// Two additional fields for alternative payment schemes.
     alternative_processes: Vec<String>,
     /// Language of the output.
-    language: Language,
+    language:              Language,
     /// Print a horizontal line at the top of the bill.
-    line_top: bool,
+    line_top:              bool,
     /// Print a vertical line between the receipt and the bill itself.
-    line_mid: bool,
+    line_mid:              bool,
 }
 
 pub struct QRBillOptions {
-    pub account: Iban,
-    pub creditor: Address,
-    pub amount: Option<f64>,
-    pub currency: Currency,
-    pub due_date: Option<NaiveDate>,
-    pub debtor: Option<Address>,
-    pub reference: Reference,
+    pub account:               Iban,
+    pub creditor:              Address,
+    pub amount:                Option<f64>,
+    pub currency:              Currency,
+    pub due_date:              Option<NaiveDate>,
+    pub debtor:                Option<Address>,
+    pub reference:             Reference,
     /// Extra information aimed for the bill recipient.
     pub extra_infos:           Option<BillingInfos>,
     /// Two additional fields for alternative payment schemes.
     pub alternative_processes: Vec<String>,
     /// Language of the output.
-    pub language: Language,
+    pub language:              Language,
     /// Print a horizontal line at the top of the bill.
-    pub top_line: bool,
+    pub top_line:              bool,
     /// Print a vertical line between the receipt and the bill itself.
-    pub payment_line: bool,
+    pub payment_line:          bool,
 }
 
 #[derive(Debug, Clone)]
@@ -293,11 +288,15 @@ impl Reference {
 
 impl std::fmt::Display for Reference {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match self {
-            Reference::Qrr(esr) => esr.to_string(),
-            Reference::Scor(reference) => chunked(&reference.with_checksum()),
-            Reference::None => String::new(),
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                Reference::Qrr(esr) => esr.to_string(),
+                Reference::Scor(reference) => chunked(&reference.with_checksum()),
+                Reference::None => String::new(),
+            }
+        )
     }
 }
 
@@ -334,18 +333,18 @@ impl QRBill {
         }
 
         Ok(Self {
-            account: options.account,
-            creditor: options.creditor,
-            amount: options.amount,
-            currency: options.currency,
-            due_date: options.due_date,
-            debtor: options.debtor,
-            reference: options.reference,
-            extra_infos: options.extra_infos,
+            account:               options.account,
+            creditor:              options.creditor,
+            amount:                options.amount,
+            currency:              options.currency,
+            due_date:              options.due_date,
+            debtor:                options.debtor,
+            reference:             options.reference,
+            extra_infos:           options.extra_infos,
             alternative_processes: options.alternative_processes,
-            language: options.language,
-            line_top: options.top_line,
-            line_mid: options.payment_line,
+            language:              options.language,
+            line_top:              options.top_line,
+            line_mid:              options.payment_line,
         })
     }
 
@@ -391,11 +390,7 @@ impl QRBill {
     /// Writes the represented QR-Bill into an SVG file.
     ///
     /// * `full_page`: Makes the generated SVG the size of a full A4 page.
-    pub fn write_svg_to_file(
-        &self,
-        path: impl AsRef<std::path::Path>,
-        full_page: bool,
-    ) -> Result<(), Error> {
+    pub fn write_svg_to_file(&self, path: impl AsRef<std::path::Path>, full_page: bool) -> Result<(), Error> {
         let svg = self.create_svg(full_page)?;
 
         std::fs::write(path, svg)?;
@@ -406,17 +401,17 @@ impl QRBill {
     /// Writes the represented QR-Bill into a PDF file.
     ///
     /// * `full_page`: Makes the generated SVG the size of a full A4 page.
-    pub fn write_pdf_to_file(
-        &self,
-        path: impl AsRef<std::path::Path>,
-        full_page: bool,
-    ) -> Result<(), Error> {
+    pub fn write_pdf_to_file(&self, path: impl AsRef<std::path::Path>, full_page: bool) -> Result<(), Error> {
         let svg = self.create_svg(full_page)?;
         let mut options = svg2pdf::usvg::Options::default();
         options.fontdb_mut().load_system_fonts();
         let tree = svg2pdf::usvg::Tree::from_str(&svg, &options)?;
 
-        let pdf = svg2pdf::to_pdf(&tree, svg2pdf::ConversionOptions::default(), svg2pdf::PageOptions::default());
+        let pdf = svg2pdf::to_pdf(
+            &tree,
+            svg2pdf::ConversionOptions::default(),
+            svg2pdf::PageOptions::default(),
+        );
         std::fs::write(path, pdf)?;
         Ok(())
     }
@@ -426,10 +421,15 @@ impl QRBill {
     /// * `full_page`: Makes the generated SVG the size of a full A4 page.
     pub fn create_svg(&self, full_page: bool) -> Result<String, Error> {
         // Make a properly sized document with a correct viewbox.
-        let (h_in_mm, h) = if full_page { (  A4_HEIGHT_IN_MM,   A4_HEIGHT) }
-        else                            { (BILL_HEIGHT_IN_MM, BILL_HEIGHT) };
+        let (h_in_mm, h) = if full_page {
+            (A4_HEIGHT_IN_MM, A4_HEIGHT)
+        } else {
+            (BILL_HEIGHT_IN_MM, BILL_HEIGHT)
+        };
         let document = Document::new()
-            .add(svg::node::element::Style::new(crate::dimensions::make_svg_styles()))
+            .add(svg::node::element::Style::new(
+                crate::dimensions::make_svg_styles(),
+            ))
             .set("width", format!("{A4_WIDTH_IN_MM}mm"))
             .set("height", format!("{h_in_mm}mm"))
             .set("viewBox", format!("0 0 {A4_WIDTH} {h}"));
@@ -467,13 +467,16 @@ impl QRBill {
     fn draw_bill(&self) -> Result<Group, Error> {
         let mut group = Group::new();
 
-        if self.line_top { group = group.add(self.line_top_scissor()?); }
-        if self.line_mid { group = group.add(self.line_mid_scissor()?); }
+        if self.line_top {
+            group = group.add(self.line_top_scissor()?);
+        }
+        if self.line_mid {
+            group = group.add(self.line_mid_scissor()?);
+        }
 
         use render::{Render, What};
         Ok(group.add(Render::bill(self, What::ReceiptAndPayment)?))
     }
-
 }
 
 /// Converts a millimeter based value into a SVG screen units value.
@@ -486,13 +489,6 @@ fn mm(value: f64) -> f64 {
 fn format_amount(amount: f64) -> String {
     format!("{:.2}", amount).separate_with_spaces()
 }
-
-// def wrap_infos(infos) {
-//     for text in infos:
-//         while(text) {
-//             yield text[:MAX_CHARS_PAYMENT_LINE]
-//             text = text[MAX_CHARS_PAYMENT_LINE:]
-
 
 pub fn chunked(unchunked: &str) -> String {
     unchunked
