@@ -15,6 +15,9 @@ mod dimensions;
 mod label;
 pub mod render;
 
+pub mod billing_infos;
+pub use billing_infos::BillingInfos;
+
 pub use label::Language;
 
 const IBAN_ALLOWED_COUNTRIES: [&str; 2] = ["CH", "LI"];
@@ -57,6 +60,8 @@ pub enum Error {
     #[error(
         "At maximum two alternative procedure with a maximum of 100 characters can be specified."
     )]
+    #[error("{0:?}")]
+    BillingInfos(#[from] billing_infos::BillingInfoError),
     AlternativeProcedure,
     #[error("An error with the QR code generation occured.")]
     Qr(#[from] QrError),
@@ -236,7 +241,7 @@ pub struct QRBill {
     debtor: Option<Address>,
     reference: Reference,
     /// Extra information aimed for the bill recipient.
-    pub extra_infos: Option<String>,
+    pub extra_infos:       Option<BillingInfos>,
     /// Two additional fields for alternative payment schemes.
     alternative_processes: Vec<String>,
     /// Language of the output.
@@ -256,7 +261,7 @@ pub struct QRBillOptions {
     pub debtor: Option<Address>,
     pub reference: Reference,
     /// Extra information aimed for the bill recipient.
-    pub extra_infos: Option<String>,
+    pub extra_infos:           Option<BillingInfos>,
     /// Two additional fields for alternative payment schemes.
     pub alternative_processes: Vec<String>,
     /// Language of the output.
@@ -373,8 +378,19 @@ impl QRBill {
                 .unwrap_or_else(|| vec!["".into(); 7]),
         );
         data.extend(self.reference.data_list());
-        data.extend(vec![self.extra_infos.clone().unwrap_or_default()]);
+        // As show in page 32 and 33 of the standardization of the unstructured and
+        // structured data, unstructured should go before EPD and structured should go after
+        data.extend(vec![self
+            .extra_infos
+            .clone()
+            .and_then(|x| x.unstructured())
+            .unwrap_or_default()]);
         data.push("EPD".to_string());
+        data.extend(vec![self
+            .extra_infos
+            .clone()
+            .and_then(|x| x.structured())
+            .unwrap_or_default()]);
         data.extend(self.alternative_processes.clone());
 
         data.join("\n")
