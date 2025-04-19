@@ -30,12 +30,8 @@ pub struct Swico {
     version: Option<Version>,
 }
 impl Swico {
-    pub fn new() -> Self {
-        Self::default()
-    }
-    pub fn s1_builder(self) -> S1Builder {
-        S1Builder::new()
-    }
+    pub fn new() -> Self { Self::default() }
+    pub fn s1_builder(self) -> S1Builder { S1Builder::new() }
     // Future-proofing for the version 2 on the SwicoSyntax
     // pub fn s2_builder(self) -> S2Builder {
     //     unimplemented!()
@@ -106,9 +102,7 @@ impl SwicoComponent {
                 v.push(i);
             }
         });
-        v.into_iter()
-            .map(|c| format!("/{:02}/", c))
-            .collect::<Vec<String>>()
+        v.into_iter().map(|c| format!("/{:02}/", c)).collect::<Vec<String>>()
     }
 }
 impl Display for SwicoComponent {
@@ -135,17 +129,16 @@ mod test {
         let start_vat = NaiveDate::parse_from_str("2024-05-01", fmt)?;
         let s = Swico::new()
             .s1_builder()
-            .vat_num("112806097")
-            .client_ref(r"145258\/Dépôt")
-            .conditions("3:10;0:30")
-            .invoice_ref("24073428")
-            .vat_date_naive(start_vat, Some(doc_date))
-            .doc_date_naive(doc_date)
+            .add_vat_num("112806097")
+            .add_client_ref(r"145258\/Dépôt")
+            .add_conditions("3:10;0:30")
+            .add_invoice_ref("24073428")
+            .add_vat_date_naive(start_vat, Some(doc_date))
+            .add_doc_date_naive(doc_date)
             .add_unstructured("73 années de retard d'impôts à payer sous 10 jours")
             .build()?;
-        let res = String::from(
-            r"//S1/10/24073428/11/240630/20/145258\/Dépôt/30/112806097/31/240501240630/40/3:10;0:30",
-        );
+        let res =
+            String::from(r"//S1/10/24073428/11/240630/20/145258\/Dépôt/30/112806097/31/240501240630/40/3:10;0:30");
         assert_eq!(s.structured().unwrap(), res);
         let res = String::from("73 années de retard d'impôts à payer sous 10 jours");
         assert_eq!(s.unstructured().unwrap(), res);

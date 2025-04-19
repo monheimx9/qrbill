@@ -1,6 +1,6 @@
 use super::{
-    Arc, BillingInfos, Emitter, NaiveDate, StructuredSet, Swico, SwicoComponent, SwicoError, TotalLenght,
-    Version, DATE_FMT,
+    Arc, BillingInfos, Emitter, NaiveDate, StructuredSet, Swico, SwicoComponent, SwicoError, TotalLenght, Version,
+    DATE_FMT,
 };
 #[derive(Debug, Default, Clone)]
 pub struct S1Builder {
@@ -24,7 +24,7 @@ impl S1Builder {
     /// Tt is used as the reference date for the terms and conditions.
     /// Together with the field /40/0:n, a maturity date of the invoice can be calculated
     /// (payable within n days after the voucher date).
-    pub fn invoice_ref(&mut self, text: impl AsRef<str>) -> &mut Self {
+    pub fn add_invoice_ref(&mut self, text: impl AsRef<str>) -> &mut Self {
         self.structured_set
             .insert(SwicoComponent::InvoiceRef, Arc::from(text.as_ref()));
         self
@@ -35,15 +35,15 @@ impl S1Builder {
     /// # Caution:
     ///
     /// This can silently fail
-    /// Both [`"240101 (2024 January 1st)"`] and [`"010124 (2001 January 24th)"`] are valid dates
+    /// Both "240101 (2024 January 1st)" and "010124 (2001 January 24th)" are valid dates
     /// If you're unsure, use [`doc_date_naive()`] and pass a [`NaiveDate`] type
-    pub fn doc_date(&mut self, text: impl AsRef<str>) -> &mut Self {
+    pub fn add_doc_date(&mut self, text: impl AsRef<str>) -> &mut Self {
         self.structured_set
             .insert(SwicoComponent::DocDate, Arc::from(text.as_ref()));
         self
     }
     /// Voucher/Invoice/Bill date
-    pub fn doc_date_naive(&mut self, date: NaiveDate) -> &mut Self {
+    pub fn add_doc_date_naive(&mut self, date: NaiveDate) -> &mut Self {
         let text = format!("{}", date.format(DATE_FMT));
         self.structured_set
             .insert(SwicoComponent::DocDate, Arc::from(text.as_ref()));
@@ -53,7 +53,7 @@ impl S1Builder {
     ///
     /// The customer reference is a reference sent by the customer
     /// and is used to identify the bill
-    pub fn client_ref(&mut self, text: impl AsRef<str>) -> &mut Self {
+    pub fn add_client_ref(&mut self, text: impl AsRef<str>) -> &mut Self {
         self.structured_set
             .insert(SwicoComponent::ClientRef, Arc::from(text.as_ref()));
         self
@@ -66,7 +66,7 @@ impl S1Builder {
     /// All bill issuers who have a UID should enter it here,
     /// even if the other VAT fields are omitted.
     /// For a bill with more than one VAT number, the first should be entered
-    pub fn vat_num(&mut self, text: impl AsRef<str>) -> &mut Self {
+    pub fn add_vat_num(&mut self, text: impl AsRef<str>) -> &mut Self {
         self.structured_set
             .insert(SwicoComponent::VatNum, Arc::from(text.as_ref()));
         self
@@ -79,9 +79,9 @@ impl S1Builder {
     /// # Caution:
     ///
     /// This can silently fail
-    /// Both [`"240101 (2024 January 1st)"`] and [`"010124 (2001 January 24th)"`] are valid dates
+    /// Both "240101 (2024 January 1st)" and "010124 (2001 January 24th)" are valid dates
     /// If you're unsure, use [`vat_date_naive()`] and pass a [`NaiveDate`] type
-    pub fn vat_date(&mut self, text: impl AsRef<str>) -> &mut Self {
+    pub fn add_vat_date(&mut self, text: impl AsRef<str>) -> &mut Self {
         self.structured_set
             .insert(SwicoComponent::VatDate, Arc::from(text.as_ref()));
         self
@@ -90,7 +90,7 @@ impl S1Builder {
     ///
     /// Accepted date format: "YYMMDD" or "YYMMDDYYMMDD"
     /// Can be a single date or a range between to dates
-    pub fn vat_date_naive(&mut self, start: NaiveDate, end: Option<NaiveDate>) -> &mut Self {
+    pub fn add_vat_date_naive(&mut self, start: NaiveDate, end: Option<NaiveDate>) -> &mut Self {
         let mut text = format!("{}", start.format(DATE_FMT));
         if let Some(d) = end {
             let e = format!("{}", d.format(DATE_FMT));
@@ -109,7 +109,7 @@ impl S1Builder {
     /// The net amount is the net price (excluding VAT) on which the VAT is calculated.
     /// If a list is given, the total of the net amounts and the VAT calculated on them must
     /// correspond to the amount in the QR Code.
-    pub fn vat_details(&mut self, text: impl AsRef<str>) -> &mut Self {
+    pub fn add_vat_details(&mut self, text: impl AsRef<str>) -> &mut Self {
         self.structured_set
             .insert(SwicoComponent::VatDetails, Arc::from(text.as_ref()));
         self
@@ -119,7 +119,7 @@ impl S1Builder {
     /// The amount is the VAT amount.
     /// The rate serves correct recording of VAT in the accounts.
     /// This makes it easier for the bill recipient to record the VAT in the case of an import.
-    pub fn vat_import(&mut self, text: impl AsRef<str>) -> &mut Self {
+    pub fn add_vat_import(&mut self, text: impl AsRef<str>) -> &mut Self {
         self.structured_set
             .insert(SwicoComponent::VatImport, Arc::from(text.as_ref()));
         self
@@ -138,7 +138,7 @@ impl S1Builder {
     /// at least the default payment date of the invoice should be indicated.
     /// Without this indication,
     /// the payment software will not be able to suggest any date for the payment.
-    pub fn conditions(&mut self, text: impl AsRef<str>) -> &mut Self {
+    pub fn add_conditions(&mut self, text: impl AsRef<str>) -> &mut Self {
         self.structured_set
             .insert(SwicoComponent::Conditions, Arc::from(text.as_ref()));
         self
@@ -147,12 +147,11 @@ impl S1Builder {
     ///
     /// # Behavior
     ///
-    /// Perform the control on each fields of the structured data set
+    /// Validate each fields of the structured data set
     /// Max authorized length of characters combinging structured and unstructured: [`140`]
     pub fn build(&mut self) -> Result<BillingInfos, SwicoError> {
         if self.structured_set.len() > 1 {
-            self.structured_set
-                .insert(SwicoComponent::Prefix, Arc::from("S1"));
+            self.structured_set.insert(SwicoComponent::Prefix, Arc::from("S1"));
         }
         let max_len = self.structured_set.tot_len();
         if max_len > 140 {
