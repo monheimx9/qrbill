@@ -14,6 +14,8 @@ pub mod iso11649;
 mod dimensions;
 mod label;
 pub mod render;
+mod utils;
+use utils::IbanKind;
 
 pub mod billing_infos;
 pub use billing_infos::BillingInfos;
@@ -55,13 +57,13 @@ pub enum Error {
     City,
     #[error("The IBAN needs to start with CH or LI.")]
     InvalidIban,
-    #[error("Extra infos can be no more than 140 characters.")]
-    ExtraInfos,
-    #[error(
-        "At maximum two alternative procedure with a maximum of 100 characters can be specified."
-    )]
+    #[error("IBAN provided ({0:?}) is not SCOR compatible (see IID)")]
+    InvalidIid(String),
+    #[error("IBAN provided ({0:?}) is not ESR compatible (see QRIID)")]
+    InvalidQriid(String),
     #[error("{0:?}")]
     BillingInfos(#[from] billing_infos::BillingInfoError),
+    #[error("At maximum two alternative procedure with a maximum of 100 characters can be specified.")]
     AlternativeProcedure,
     #[error("An error with the QR code generation occured.")]
     Qr(#[from] QrError),
@@ -319,20 +321,10 @@ impl QRBill {
         if !IBAN_ALLOWED_COUNTRIES.contains(&options.account.country_code()) {
             return Err(Error::InvalidIban);
         }
-        let iban_iid = options.account.electronic_str()[4..9]
-            .parse()
-            .expect("This is a bug. Please report it.");
-        let _account_is_qriban = (QR_IID_START..=QR_IID_END).contains(&iban_iid);
-
-        // TODO validate ESR reference number
 
         // TODO: validate QR IBAN / QRID matches.
-
-        if let Some(extra_infos) = options.extra_infos.as_ref() {
-            if extra_infos.len() > 120 {
-                return Err(Error::ExtraInfos);
-            }
-        }
+        let iban_kind = options.account.kind()?;
+        iban_kind.try_matching_reference(&options.reference, options.account.electronic_str())?;
 
         if options.alternative_processes.len() > 2 {
             return Err(Error::AlternativeProcedure);
