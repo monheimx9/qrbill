@@ -65,12 +65,7 @@ impl Render {
             value:   sty!(value),
             accept:  opt!(acceptance_pt),
         };
-        Self {
-            part,
-            dims,
-            sty,
-            label,
-        }
+        Self { part, dims, sty, label }
     }
 
     pub fn render_all(&self, bill: &QRBill) -> Result<Group, Error> {
@@ -85,11 +80,7 @@ impl Render {
 
     fn section_title(&self) -> Text {
         let Self {
-            dims,
-            label,
-            part,
-            sty,
-            ..
+            dims, label, part, sty, ..
         } = self;
         let text = match part {
             Part::Receipt => label.receipt,
@@ -151,9 +142,11 @@ impl Render {
         // specific kind of additional information that exists only in this
         // crate?
         if let Some(date) = bill.due_date {
-            g = g
-                .add(txt(&mut cursor, &sty.heading, label.payable_by_date))
-                .add(txt(&mut cursor, &sty.value, format_date(date)));
+            g = g.add(txt(&mut cursor, &sty.heading, label.payable_by_date)).add(txt(
+                &mut cursor,
+                &sty.value,
+                format_date(date),
+            ));
             skip_one_line!();
         }
         // ----- Debtor --------------------------------------------------------
@@ -176,11 +169,7 @@ impl Render {
     fn section_amount(&self, bill: &QRBill) -> Group {
         let mut g = Group::new();
         let Self {
-            dims,
-            label,
-            part,
-            sty,
-            ..
+            dims, label, part, sty, ..
         } = self;
 
         // Easier to have two cursors, than to adjust x value of single cursor
@@ -361,6 +350,4 @@ fn txt(cursor: &mut Xy, style: &Style, text: impl Into<String>) -> Text {
 }
 
 /// Format the due date according to spec.
-fn format_date(date: NaiveDate) -> String {
-    date.format("%d.%m.%Y").to_string()
-}
+fn format_date(date: NaiveDate) -> String { date.format("%d.%m.%Y").to_string() }
